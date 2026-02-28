@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Downloader</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; color: #333; max-width: 600px; margin: 40px auto; padding: 20px; text-align: center; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #fe2c55; /* Warna khas TikTok */ margin-bottom: 5px; }
+        input { width: 90%; padding: 12px; margin-bottom: 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
+        input:focus { border-color: #fe2c55; }
+        button { padding: 12px 24px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; width: 90%; transition: 0.2s; }
+        button:hover { background: #e0264b; }
+        #loading { display: none; font-weight: bold; color: #555; margin-top: 15px; }
+        #result { margin-top: 25px; text-align: left; }
+        .media-item { margin-bottom: 20px; text-align: center; background: #f1f1f1; padding: 10px; border-radius: 8px; }
+        img, video { max-width: 100%; border-radius: 8px; background: black; }
+        a.btn-download { display: inline-block; margin-top: 10px; padding: 10px 20px; background: #25f4ee; color: black; text-decoration: none; border-radius: 6px; font-weight: bold; }
+        a.btn-download:hover { background: #1bc8c3; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>TikTok Downloader</h1>
+        <p>Download Video Tanpa Watermark & Slide Foto</p>
+        
+        <input type="text" id="urlInput" placeholder="Tempel link TikTok di sini..." />
+        <button onclick="prosesDownload()">Download Sekarang</button>
+        
+        <p id="loading">⏳ Sedang memproses URL...</p>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function prosesDownload() {
+            const url = document.getElementById('urlInput').value;
+            const resultDiv = document.getElementById('result');
+            const loading = document.getElementById('loading');
+            
+            if (!url) {
+                alert('⚠️ Harap masukkan link TikTok terlebih dahulu!');
+                return;
+            }
+
+            // Reset tampilan
+            resultDiv.innerHTML = '';
+            loading.style.display = 'block';
+
+            try {
+                // Memanggil backend Vercel kita
+                const res = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                
+                loading.style.display = 'none';
+
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color:red; text-align:center;">❌ Error: ${data.error}</p>`;
+                    return;
+                }
+
+                let htmlContent = `<h4 style="text-align:center;">${data.title || 'Hasil:'}</h4>`;
+
+                // Jika hasilnya VIDEO
+                if (data.type === 'video') {
+                    htmlContent += `
+                        <div class="media-item">
+                            <video controls>
+                                <source src="${data.play}" type="video/mp4">
+                            </video>
+                            <br>
+                            <a class="btn-download" href="${data.play}" target="_blank">⬇️ Download Video</a>
+                        </div>
+                    `;
+                } 
+                // Jika hasilnya GAMBAR (SLIDE)
+                else if (data.type === 'images') {
+                    data.images.forEach((imgUrl, index) => {
+                        htmlContent += `
+                            <div class="media-item">
+                                <img src="${imgUrl}" alt="Slide ${index + 1}">
+                                <br>
+                                <a class="btn-download" href="${imgUrl}" target="_blank">⬇️ Download Gambar ${index + 1}</a>
+                            </div>
+                        `;
+                    });
+                }
+
+                resultDiv.innerHTML = htmlContent;
+
+            } catch (err) {
+                loading.style.display = 'none';
+                resultDiv.innerHTML = `<p style="color:red; text-align:center;">❌ Gagal terhubung ke server.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
